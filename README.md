@@ -1,2 +1,2 @@
-# CL-Stat-R-gression_Lin-aire
+# CL-Stat-Régression_Linéaire
 # BE 1 de Statistiques à Centrale Lyon
