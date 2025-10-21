@@ -1,0 +1,473 @@
+---
+title: "Impact du CO2 sur la température de la planète"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+Pour de l'aide sur R Markdown on peut aller sur 
+
+http://rmarkdown.rstudio.com
+
+https://lms.fun-mooc.fr/c4x/UPSUD/42001S02/asset/RMarkdown.html
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.width = 6, fig.height = 6)
+```
+
+## Introduction
+
+On s'intéresse à la dépendance entre la température de surface de la planète et les émissions de C02 et leurs évolutions dans le temps. L'analyse de la température de surface GISS ver. 4 (GISTEMP v4) est une estimation du changement global de la température de surface. Les données proviennent de NOAA GHCN v4 (stations météorologiques) et ERSST v5 (zones océaniques). Plus de détails sont accessibles sur ce lien https://data.giss.nasa.gov/gistemp/.
+Concernant le CO2, il est mesuré sur le Mauna Loa (sommet de l'archipel d'Hawai) depuis la fin des annnées 50. Détails sur https://gml.noaa.gov/ccgg/trends/
+
+Le fichier "Data/climat_CO2.txt" contient 3 colonnes : 
+
+- **year** : années entre 1959 et 2020
+
+- **CO2** : CO2 exprimé en fraction molaire dans l'air sec, micromol/mol, abrégé en ppm. Voir www.esrl.noaa.gov/gmd/ccgg/trends/ pour plus de détails.
+
+- **gistemp** : anomalies de température en dégrés Celsius. Il s'agit des écarts entre la température annuelle et la température moyenne de la période 1951-1980.
+
+## 1 - On commence par lire et visualiser les données du fichier
+
+
+```{r}
+CO2 = read.table(file = "Data/climat_CO2.txt", header = TRUE)
+head(CO2)
+pairs(CO2)
+plot(CO2$year,CO2$CO2)
+plot(gistemp~CO2, data = CO2)
+```
+
+On remarque que l'objet CO2 est une structure de données. L'accès aux différents champs se fait avec le $. 
+Mais la table CO2 peut aussi être utilisée comme une matrice. 
+Les commandes pour accéder à une colonne, à une ligne, à un set d'indices sont alors les suivantes :
+
+```{r}
+CO2[,3]
+CO2[30,]
+indices = CO2$gistemp>0.5
+CO2[indices,1]
+CO2[c(12, 35, 50),]
+```
+
+## 2 - On met en place un modèle de régression de la température en fonction du CO2
+
+La commande summary permet d'avoir accès aux estimations des paramètres et aux tests statistiques.
+La commande plot permet l'analyse des résidus.
+
+```{r}
+mod1 = lm(gistemp~CO2, data = CO2)
+summary(mod1)
+par(mfrow=c(2,2))
+plot(mod1)
+```
+
+```{r}
+plot(gistemp~CO2, data = CO2)
+abline(mod1$coefficients, col = 'red')
+```
+
+
+## 3 - Prédiction du modèle 
+
+### La prédiction aux points d'observation
+
+Le champ *fitted.values* de l'objet *CO2* contient les valeurs de  $\hat{y}_i , \forall i \in \{1, ..., n\}$ . 
+
+```{r}
+plot(CO2$gistemp ,mod1$fitted.values)
+```
+
+On considère que les résidus traduisent un bruit de mesure. 
+Question : quelle est la donnée ayant la plus grande erreur de mesure ? 
+
+```{r}
+ecarts = abs(CO2$gistemp -mod1$fitted.values)
+indice = ecarts == max(ecarts)
+CO2[indice,]
+c(CO2$gistemp[indice] ,mod1$fitted.values[indice])
+```
+
+### La prédiction en dehors des points d'observation
+
+On utilise la fonction *predict* sur un seul point :
+
+```{r}
+nouvel_individu = data.frame(CO2 = 380)
+prediction = predict(mod1, newdata = nouvel_individu)
+plot(gistemp~CO2, data = CO2)
+abline(mod1$coefficients, col = 'red')
+points(nouvel_individu$CO2,prediction,col ="blue", pch = 19)
+```
+
+On peut aussi obtenir les intervalles de confiance et de prédiction :
+```{r}
+prediction_IC = data.frame(predict(mod1, newdata = nouvel_individu, interval = 'confidence', level = 0.95))
+prediction_IC
+plot(gistemp~CO2, data = CO2)
+abline(mod1$coefficients, col = 'red')
+points(nouvel_individu$CO2,prediction_IC$fit,col ="blue", pch = 19)
+points(nouvel_individu$CO2,prediction_IC$lwr,col ="blue", pch = 19)
+points(nouvel_individu$CO2,prediction_IC$upr,col ="blue", pch = 19)
+
+prediction_IP = data.frame(predict(mod1, newdata = nouvel_individu, interval = 'prediction', level = 0.95))
+points(nouvel_individu$CO2,prediction_IP$lwr,col ="green", pch = 19)
+points(nouvel_individu$CO2,prediction_IP$upr,col ="green", pch = 19)
+
+```
+
+hhhhh
+partie exercice
+
+## Exercice 1 (Prise en main de R) – Évolution de la température moyenne de la surface de la planète
+
+### 1) Analyser le Notebook "climat.rmd"
+
+fait
+
+### 2-0) Réaliser la régression linéaire du CO2 en fonction de year
+```{r}
+mod2 = lm(CO2 ~ year, data = CO2)
+summary(mod2)
+```
+### 2-a) Donner l'équation du modèle
+
+l'équation du modèle est : pred_CO2 = b0 + b1 * Year
+et d'après le summary : b0 = -2826.2821, b1 = 1.5997 (Approximations)
+
+
+### 2-b) Part de variance expliquée par le modèle
+
+Le coefficient de détermination R2 mesure la part de la variance du CO2 expliquée par la variable year. Le modèle explique donc environ 98.3 % de la variabilité observée dans les concentrations de CO2
+
+### 2-c) étude des résidus
+
+```{r}
+par(mfrow = c(2,2))
+plot(mod2)
+```
+
+```{r}
+plot(CO2 ~ year, data = CO2)
+abline(mod2$coefficients, col = "red")
+```
+
+### 2-d) Autre modèle : Modèle quadratique
+
+```{r}
+# Modèle avec un terme quadratique
+mod2_quad = lm(CO2 ~ poly(year, 2), data = CO2)
+summary(mod2_quad)
+```
+```{r}
+plot(CO2 ~ year, data = CO2)
+abline(mod2$coefficients, col = "red", lwd = 2)
+lines(CO2$year, fitted(mod2_quad), col = "blue", lwd = 2)
+legend("topleft", legend = c("Linéaire", "Quadratique"),
+       col = c("red", "blue"), lwd = 2, bty = "n")
+```
+
+### 3-a) Prédiction du niveau de CO2 Moyen en 2050
+
+```{r}
+nouvelle_annee = data.frame(year = 2050)
+prediction = predict(mod2_quad, newdata = nouvelle_annee)
+plot(CO2~year, data = CO2, xlim = c(1959, 2055),ylim = c(300,550))
+lines(CO2$year, fitted(mod2_quad), col = "red", lwd = 2)
+points(nouvelle_annee$year,prediction,col ="blue", pch = 19)
+
+```
+
+### 3-b) prédiction de l’anomalie de température en 2050
+
+```{r}
+nouvelle_annee = data.frame(year = 2050)
+predict_CO2_2050 = predict(mod2_quad, newdata = nouvelle_annee, interval = "confidence")
+predict_CO2_2050
+```
+```{r}
+CO2_2050 = predict_CO2_2050[1]  # valeur centrale
+prediction_temp_2050 = predict(mod1, newdata = data.frame(CO2 = CO2_2050), interval = "prediction")
+prediction_temp_2050
+```
+
+### 3-c) prévision optimiste et pessimiste de la température
+
+
+
+## Exercice 2 – Étude de la densité de peuplement des chenilles
+
+On utilise les données du fichier `Data/chenilles.txt`, qui contiennent 32 parcelles et 10 variables explicatives [X1, ..., X10] comme décrit.
+
+---
+
+### 1) Lecture des données
+
+```{r}
+chenilles = read.table("Data/chenilles.txt", header = TRUE)
+head(chenilles)
+```
+### 2) Visualisation des données
+```{r}
+summary(chenilles)
+pairs(chenilles)
+```
+
+
+### 3) Equation du modèle de régression
+
+Y = b0 + b1 * X1 + b2 * X2 + ... + b10 * X10 (+ Epsilon)
+
+Il y a donc 11 paramètres à estimer (b0 à b10)
+
+### 4) Calcul de la régression
+
+```{r}
+# Régression linéaire multiple
+
+modele_full = lm(Y ~ X1 + X2 + X3 + X4 + X5 + X6 + X7 + X8 + X9 + X10, data = chenilles)
+summary(modele_full)
+```
+### 5) Test de non-régression 
+
+Hypothèse nulle H0 : Tous les coefficients sauf l'intercept sont nuls (b1=b2=...=b10=0)
+
+Statistique : F = (SSR/k)/(SSE/(n-k-1))
+
+Résultat : summary(modele_full) fournit la p-value. Si la p-value est inférieure à 0.05, on rejette H0, le modèle est significatif.
+
+Conclusion : Ici p-value = 0.001411 < 0.05 donc le modèle est significatif.
+
+### 6) Le modèle estimé convient-il ?
+
+```{r}
+par(mfrow=c(2,2))
+plot(modele_full)
+```
+
+
+### 7) Algorithme backward et test de Student
+
+Principe : On commence avec toutes les variables et on retire la variable la moins significative (p-value la plus élevée > 0.05) jusqu’à ce que toutes soient significatives.
+
+```{r}
+modele_backward = step(modele_full, direction = "backward", trace = FALSE)
+summary(modele_backward)
+```
+
+
+Le modèle obtenu avec le test de Student est :
+
+pred (Y) = 6.4550929 - 0.0025453 * X1 - 0.0412082 * X2 - 0.5716393 * X4 + 0.1349001 * X5 - 0.3190932 * X9
+
+### 8-1) Critère AIC
+
+```{r}
+# AIC
+modele_AIC = step(modele_full, direction = "both", k = 2) # k=2 correspond à AIC 
+summary(modele_AIC)
+```
+
+Le modèle obtenu avec le critère AIC est :
+
+pred (Y) = 6.4550929 - 0.0025453 * X1 - 0.0412082 * X2 - 0.5716393 * X4 + 0.1349001 * X5 - 0.3190932 * X9
+
+### 8-2) Critère BIC
+
+```{r}
+# BIC
+modele_BIC = step(modele_full, direction = "both", k = log(nrow(chenilles)))
+summary(modele_BIC)
+```
+
+Le modèle obtenu avec le critère BIC est :
+
+pred (Y) = 6.6030875 - 0.0028129 * X1 - 0.0456472 * X2 - 0.7550950 * X4 + 0.1684745 * X5
+
+
+### 9) Choix du meilleur modèle
+
+Comparaison des modèles
+
+```{r}
+anova(modele_backward, modele_AIC, modele_BIC)
+```
+Le modèle réduit obtenu via BIC, sans la variable X9 dont la suppression ne dégrade pas significativement l’ajustement (p = 0.1554), est retenu. Ce modèle est plus simple et conserve quasiment le même pouvoir explicatif que le modèle complet.
+
+
+## Exercice 3 - Estimateur du maximum de vraisemblance du paramètre p
+
+### 1. Fonction de vraisemblance
+
+La fonction de masse de probabilité pour \(X_i \sim B(m,p)\) est :
+
+\[
+P(X_i = x_i) = \binom{m}{x_i} p^{x_i} (1-p)^{m-x_i}, \quad x_i = 0,1,\dots,m
+\]
+
+Comme les \(X_i\) sont indépendantes, la fonction de vraisemblance pour l’échantillon est :
+
+\[
+L(p) = \prod_{i=1}^n \binom{m}{x_i} p^{x_i} (1-p)^{m-x_i} = \left(\prod_{i=1}^n \binom{m}{x_i}\right) p^{\sum_{i=1}^n x_i} (1-p)^{nm - \sum_{i=1}^n x_i}
+\]
+
+Posons \(S = \sum_{i=1}^n X_i\). Alors :
+
+\[
+L(p) = \left(\prod_{i=1}^n \binom{m}{x_i}\right) p^{S} (1-p)^{nm - S}
+\]
+
+---
+
+### 2. Log-vraisemblance
+
+\[
+\ell(p) = \log L(p) = \sum_{i=1}^n \log \binom{m}{x_i} + S \log p + (nm - S) \log(1-p)
+\]
+
+On maximise uniquement la partie dépendante de \(p\) :
+
+\[
+\ell(p) = S \log p + (nm - S) \log(1-p)
+\]
+
+---
+
+### 3. Estimateur du maximum de vraisemblance
+
+Dérivons \(\ell(p)\) par rapport à \(p\) :
+
+\[
+\frac{d\ell}{dp} = \frac{S}{p} - \frac{nm - S}{1-p} = 0 \implies S(1-p) = (nm - S)p \implies \hat{p} = \frac{S}{nm} = \frac{\sum_{i=1}^n X_i}{nm}
+\]
+
+---
+
+### 4. Biais
+
+\[
+E[\hat{p}] = E\left[\frac{\sum_{i=1}^n X_i}{nm}\right] = \frac{1}{nm} \sum_{i=1}^n E[X_i] = \frac{1}{nm} \cdot n \cdot m p = p
+\]
+
+\[
+\text{Biais}(\hat{p}) = E[\hat{p}] - p = 0
+\]
+
+L'estimateur est **non biaisé**.
+
+---
+
+### 5. Variance
+
+\[
+\text{Var}(\hat{p}) = \text{Var}\left(\frac{1}{nm} \sum_{i=1}^n X_i \right) = \frac{1}{(nm)^2} \sum_{i=1}^n \text{Var}(X_i) = \frac{n \cdot m p (1-p)}{(nm)^2} = \frac{p(1-p)}{nm}
+\]
+
+---
+
+### Résumé
+
+\[
+\hat{p}_{\text{MLE}} = \frac{\sum_{i=1}^n X_i}{nm}, \quad \text{Biais} = 0, \quad \text{Var}(\hat{p}) = \frac{p(1-p)}{nm}
+\]
+
+
+
+## Exercice 4 - Variables aléatoires, estimateurs sans biais
+
+## 1. Espérance et variance de \(Y_j\)
+
+\[
+P(Y_j = 1) = P(X_j \ge a) = \frac{b-a}{b}, \quad P(Y_j = -1) = \frac{a}{b}
+\]
+
+### Espérance
+
+\[
+E[Y_j] = 1 \cdot \frac{b-a}{b} + (-1) \cdot \frac{a}{b} = \frac{b-2a}{b}
+\]
+
+### Variance
+
+\[
+\mathrm{Var}(Y_j) = E[Y_j^2] - (E[Y_j])^2 = 1 - \left(\frac{b-2a}{b}\right)^2 = \frac{4a(b-a)}{b^2}
+\]
+
+---
+
+## 2. Estimateur \(\hat{a} = k \sum_{j=1}^n Y_j\)
+
+\[
+E[\hat{a}] = E\left[k \sum_{j=1}^n Y_j \right] = k n \frac{b-2a}{b}
+\]
+
+Pour que \(\hat{a}\) soit sans biais : 
+
+\[
+a = k n \frac{b-2a}{b} \implies k = \frac{a b}{n(b-2a)}
+\]
+
+Cela dépend de \(a\), donc **il n’existe pas de \(k \in \mathbb{R}\) indépendant de \(a\)** permettant d’obtenir un estimateur sans biais.
+
+---
+
+## 3. Estimateur du maximum de vraisemblance
+
+Soit \(\epsilon_j = Y_j \in \{-1,1\}\). Alors :
+
+\[
+P(\epsilon_1,\dots,\epsilon_n; a) = \prod_{j=1}^n P(Y_j = \epsilon_j) = 
+\left(\frac{b-a}{b}\right)^{\sum_{j=1}^n \frac{1+\epsilon_j}{2}} 
+\left(\frac{a}{b}\right)^{\sum_{j=1}^n \frac{1-\epsilon_j}{2}}
+\]
+
+### Log-vraisemblance
+
+\[
+\ell(a) = \sum_{j=1}^n \frac{1+\epsilon_j}{2} \log(b-a) + \sum_{j=1}^n \frac{1-\epsilon_j}{2} \log(a) - n \log b
+\]
+
+Dérivée :
+
+\[
+\frac{d\ell}{da} = - \frac{n_+}{b-a} + \frac{n_-}{a} = 0 \implies a = \frac{n_-}{n} b
+\]
+
+avec \(n_+ = \#\{\epsilon_j = 1\}\), \(n_- = \#\{\epsilon_j = -1\}\).
+
+Donc le **MLE est** :
+
+\[
+\hat{a}_{\text{MLE}} = \frac{b}{2} \left(1 - \frac{1}{n} \sum_{j=1}^n Y_j \right)
+\]
+
+---
+
+### Biais et variance du MLE
+
+\[
+E[\hat{a}_{\text{MLE}}] = \frac{b}{2} (1 - E[Y_j]) = \frac{b}{2} \left(1 - \frac{b-2a}{b}\right) = a
+\]
+
+\[
+\mathrm{Var}(\hat{a}_{\text{MLE}}) = \left(\frac{b}{2}\right)^2 \frac{\mathrm{Var}(Y_j)}{n} = \frac{b^2}{4} \cdot \frac{4a(b-a)}{b^2 n} = \frac{a(b-a)}{n}
+\]
+
+\[
+\lim_{n \to \infty} \mathrm{Var}(\hat{a}_{\text{MLE}}) = 0
+\]
+
+---
+
+## Résumé
+
+\[
+\begin{cases}
+E[Y_j] = \frac{b-2a}{b}, & \mathrm{Var}(Y_j) = \frac{4a(b-a)}{b^2} \\
+\hat{a} = k \sum Y_j & \text{pas de k indépendant de a pour un estimateur sans biais} \\
+\hat{a}_{\text{MLE}} = \frac{b}{2} (1 - \bar{Y}) & \text{sans biais, } \mathrm{Var} = \frac{a(b-a)}{n} \to 0
+\end{cases}
+\]
+
+

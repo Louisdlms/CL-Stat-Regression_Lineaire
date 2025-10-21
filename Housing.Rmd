@@ -1,0 +1,193 @@
+---
+title: "BE 1 - Régression Linéaire"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+## Exercice 1 - Prix de mise en vente des appartements a Grenoble
+
+### 0) Chargement des données
+
+```{r}
+Immo = read.table(file = "Data/immo.txt", header = TRUE)
+head(Immo)
+pairs(Immo)
+plot(Immo$m2,Immo$prix)
+```
+
+
+### 1-0) Modèle de régression linéaire
+
+```{r}
+mod1 = lm(prix~m2, data = Immo)
+summary(mod1)
+```
+
+
+### 1-a) Droite de régression et données sur le même graphique
+
+```{r}
+plot(prix~m2, data = Immo)
+abline(mod1$coefficients, col = 'red')
+```
+
+
+### 1-b) Pourcentage de variance expliqué par la régression
+
+Le coefficient de détermination R2 mesure la part de la variance du prix expliquée par la variable m2. Le modèle explique donc environ 90.88 % de la variabilité observée dans les prix de ventes a Grenoble
+
+### 1-c) Analyse du test de student
+
+Pour vérifier si la surface des appartements a un effet significatif sur le prix, on réalise un test de Student sur le coefficient associé à la variable $m2$.
+
+\paragraph{Hypothèses :}
+\[
+H_0 : \beta_{m2} = 0 \quad \text{(la surface n'a pas d'effet sur le prix)}
+\]  
+\[
+H_1 : \beta_{m2} \neq 0 \quad \text{(la surface a un effet sur le prix)}
+\]
+
+\paragraph{Statistique du test :}
+\[
+t = \frac{\hat{\beta}_{m2}}{SE(\hat{\beta}_{m2})} \approx 15.786
+\]
+
+Sous l'hypothèse nulle $H_0$, cette statistique suit une loi de Student à $n-2 = 25$ degrés de liberté :
+\[
+t \sim t_{25}
+\]
+
+\paragraph{p-value :}
+La p-value associée est très faible :
+\[
+p = 1.65 \times 10^{-14} \ll 0.05
+\]
+
+\paragraph{Conclusion :}
+Comme la p-value est extrêmement faible, on rejette l'hypothèse nulle $H_0$ au seuil de 5\%.  
+Cela signifie que la surface des appartements ($m2$) a un effet significatif sur le prix.
+
+
+### 2) Prédiction du prix de vente à 90 m2 et intervalle de confiance à 95%
+
+```{r}
+predict(mod1, newdata = data.frame(m2 = 90), interval = "confidence", level = 0.95)
+```
+
+D'après la prédiction effectuée, on peut prévoir un prix de vente moyen de 223,921.50 € pour un appartement de 90 m2.
+
+L'intervalle de confiance à 95% pour la mise en vente d'un appartement de 90 m2 a Grenoble est [209,962 ; 237,880.90] €.
+
+
+### 3) Intervalle de prédiction à 95%
+
+```{r}
+predict(mod1, newdata = data.frame(m2 = 90), interval = "prediction", level = 0.95)
+```
+
+L’intervalle de prédiction à 95 % pour un appartement de 90 m2 est [154 ; 294] K€.
+Le prix proposé de 280 K€ se trouve à l’intérieur de cet intervalle.
+On peut donc conclure qu’il est statistiquement acceptable de mettre en vente cet appartement à 280 K€, car ce prix est compatible avec le modèle linéaire établi.
+
+
+### 4) Etude des résidus et deuxième modèle
+```{r}
+par(mfrow=c(2,2))
+plot(mod1)
+```
+
+On observe une légère courbure en forme de U sur la courbe residual vs fitted : et donc une répartition qui n'est pas vraiment aléatoire autour de 0.
+
+
+
+
+```{r}
+mod2 <- lm(prix ~ poly(m2,2), data = Immo)
+summary(mod2)
+par(mfrow=c(2,2))
+plot(mod2)
+```
+
+Ce nouveau modèle explique 95.83% de la variance, et la p-value de chacun des coefficients est très largement inférieure à 0.05. m2 et (m2)^2 ont donc un impact significatif sur le prix de vente des apparetements à Grenoble
+
+
+
+```{r}
+plot(prix ~ m2, data = Immo)
+o <- order(Immo$m2)
+lines(Immo$m2[o], fitted(mod2)[o], col="blue", lwd=2)
+```
+
+
+
+```{r}
+predict(mod2, newdata = data.frame(m2 = 90), interval = "prediction", level = 0.95)
+```
+L'intervalle de prédiction à 95% pour un appartemment de 90 m2  avec ce nouveau modèle est maintenant [149 ; 248] K€.
+L'incertitude de prédiction a donc bien été réduite avec ce modèle.
+
+
+
+## Exercice 2 - Valeur des logements des villes aux alentours de Boston
+
+### 0) Chargement des données et création du modèle
+
+```{r}
+Housing = read.table("Data/housing_new.txt", header = TRUE)
+head(Housing)
+```
+```{r}
+mod_full <- lm(class ~ ., data = Housing)
+summary(mod_full)
+
+```
+
+### 1) Part de la variance expliquée par le modèle
+
+Le coefficient de détermination R2 mesure la part de la variance de la valeur des logements (class) expliquée par le modèle. Le modèle explique donc environ 73.43 % de la variabilité observée dans la valeur des logements.
+
+### 2) Part de la variance expliquée par le modèle
+
+On teste H0 : tous les coefficients des variables explicatives sont nuls.
+La statistique F = 113.5 suit une loi de Fisher F12,493 sous H0.
+Avec une p-value < 2.2 × 10^(-16), très inférieure au risque de première espèce alpha = 1 %, on rejette H0. 
+Le modèle global est donc hautement significatif et les variables explicatives ont un effet sur la valeur des logements.
+
+
+### 3) Variables significatives dans le modèle
+
+En considérant un seuil de significativité alpha = 1 %, les variables significatives dans le modèle sont CRIM, ZN, NOX, RM, DIS, RAD, TAX, PTRATIO et LSTAT.
+Les variables INDUS et AGE ne sont pas significatives.
+Il n’est cependant pas certain que les autres variables n’aient aucun effet réel, car certaines peuvent être masquées par la colinéarité ou la variabilité de l’échantillon.
+
+
+### 4) Simplification du modèle
+
+Pour simplifier le modèle, on utilise la méthode stepwise backward, qui supprime progressivement les variables les moins significatives afin de minimiser le critère AIC.
+Cette méthode permet de réduire le nombre de variables tout en conservant un modèle performant pour expliquer la valeur des logements.
+Le modèle final ne contient que les variables ayant un effet significatif et améliore la lisibilité et l’interprétabilité du modèle.
+
+```{r}
+mod_simpl = step(mod_full, direction = "backward", trace = FALSE)
+summary(mod_simpl)
+```
+
+
+### 5) Evaluation du modèle obtenu
+
+Le nouveau modèle explique 73.42% de la variance, soit très proche de ce qu'explique le modèle complet, mais avec moins de variables donc plus de simplicité. Tous les coefficients des variables retenues ont une p-value inférieure à 0.01. Les variables retenues sont donc toutes significatives.
+
+
+### 6) Proposition d'un meilleur modèle
+```{r}
+# modèle avec toutes les interactions
+new_full_model <- lm(class ~ (.)^2, data = Housing)
+summary(new_full_model)
+```
+```{r}
+best_model <- step(new_full_model, direction = "backward", trace = FALSE)
+summary(best_model)
+```
+
