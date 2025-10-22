@@ -5,6 +5,10 @@ output:
   html_document: default
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.width = 6, fig.height = 6)
+```
+
 ## Exercice 1 - Prix de mise en vente des appartements a Grenoble
 
 ### 0) Chargement des données
@@ -89,12 +93,12 @@ predict(mod1, newdata = data.frame(m2 = 90), interval = "prediction", level = 0.
 
 L’intervalle de prédiction à 95 % pour un appartement de 90 m2 est [154 ; 294] K€.
 Le prix proposé de 280 K€ se trouve à l’intérieur de cet intervalle.
-On peut donc conclure qu’il est statistiquement acceptable de mettre en vente cet appartement à 280 K€, car ce prix est compatible avec le modèle linéaire établi.
+On peut donc conclure qu’il est statistiquement acceptable de mettre en vente cet appartement à 280 K€.
 
 
 ### 4) Etude des résidus et deuxième modèle
 ```{r}
-par(mfrow=c(2,2))
+#par(mfrow=c(2,2))
 plot(mod1)
 ```
 
@@ -106,7 +110,7 @@ On observe une légère courbure en forme de U sur la courbe residual vs fitted 
 ```{r}
 mod2 <- lm(prix ~ poly(m2,2), data = Immo)
 summary(mod2)
-par(mfrow=c(2,2))
+#par(mfrow=c(2,2))
 plot(mod2)
 ```
 

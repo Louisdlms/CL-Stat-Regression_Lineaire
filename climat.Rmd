@@ -1,8 +1,8 @@
 ---
 title: "Impact du CO2 sur la température de la planète"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 Pour de l'aide sur R Markdown on peut aller sur 
@@ -63,6 +63,10 @@ par(mfrow=c(2,2))
 plot(mod1)
 ```
 
+bruit epsilon centré, suivant une loi normale (QQ plot)
+bruit epsilon esperance nulle (Residuals vs fitted) droite rouge constante, 0, et points uniformément répartis autour de 0 
+Scale location Variance eviron egale à 1
+Residuals : points qui ont beaucoup d'influence sur le modèle. on veut distance de cook la plus faible possible. On veut que la majorité de nos points soient en dessous de 0.5. Car on ne veut pas d'outliers
 ```{r}
 plot(gistemp~CO2, data = CO2)
 abline(mod1$coefficients, col = 'red')
@@ -159,6 +163,7 @@ abline(mod2$coefficients, col = "red")
 # Modèle avec un terme quadratique
 mod2_quad = lm(CO2 ~ poly(year, 2), data = CO2)
 summary(mod2_quad)
+plot(mod2_quad)
 ```
 ```{r}
 plot(CO2 ~ year, data = CO2)

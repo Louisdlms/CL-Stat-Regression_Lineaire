@@ -1,0 +1,227 @@
+---
+title: "BE 1 - Régression Linéaire"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.width = 6, fig.height = 6)
+```
+
+## Exercice 1 - Acidification de l'océan
+
+### 0) Chargement des données
+
+```{r}
+Acid = read.table(file = "Data/ph.txt", header = T, sep='\t', dec=',')
+head(Acid)
+pairs(Acid)
+plot(Acid$days,Acid$pHcalc_insitu)
+```
+
+### 1-0) Modèle de régression linéaire
+
+```{r}
+mod1 = lm(pHcalc_insitu~days, data = Acid)
+summary(mod1)
+```
+### 1-a) Droite de régression et données sur le même graphique
+
+```{r}
+plot(pHcalc_insitu~days, data = Acid)
+abline(mod1$coefficients, col = 'red')
+```
+
+### 1-b) Pourcentage de variance expliqué par la régression
+
+Le coefficient de détermination R2 mesure la part de la variance du pH expliquée par la variable days. Le modèle explique donc environ 54.99 % de la variabilité observée dans le pH de l'océan.
+
+
+### 1-c) Analyse du test de student
+
+On pose les hypothèses suivantes : 
+
+H0 : \( {\beta}_{days}=0 \), c'est-à-dire que la variable days n'a pas un impact significatif sur la variable pH.
+
+H1 : \( {\beta}_{days} \neq 0 \),  la variable days a un impact significatif sur la variable pH.
+
+Sous l'hypothèse H0, la statistique du test est donnée par :
+$$
+t_{days} = \frac{\hat{\beta}_{days}}{\sqrt{\hat{\sigma}^2 \cdot [(X^T X)^{-1}]_{days, days}}}
+$$
+
+Où :
+
+- \( \hat{\beta}_{days} \) est l'estimation du coefficient \( \beta_{days} \) obtenue par les moindres carrés.
+
+- \( \hat{\sigma}^2 \) est l'estimation de la variance des erreurs.
+
+- \( [(X^T X)^{-1}]_{days, days} \) est l'élément de la diagonale de la matrice \( (X^T X)^{-1} \) correspondant à la variable days.
+
+Et ce car sous l'hypothèse H0, T suit une loi de Student à (n-p-1) degré de liberté.
+
+On rejette H0 si la P-Value associée au coefficient days est inférieure à 0.05
+
+Ici la P-Value < 2e-16 est très faible devant le seuil 0.05 donc on rejette H0.
+
+Cela signifie que la variable days est bien significative vis-à-vis des variations de pH.
+
+### 2) Prédiction du pH moyen en 2050 et intervalle de confiance à 95%
+
+```{r}
+predict(mod1, newdata = data.frame(days = 19000), interval = "confidence", level = 0.95)
+```
+
+
+D'après la prédiction effectuée, on peut prévoir un pH moyen en 2050 de 8.022966.
+
+L'intervalle de confiance à 95% pour le pH en 2050 est [8.016103 ; 8.029829].
+
+
+
+### 3) Intervalle de prédiction à 95%
+
+```{r}
+predict(mod1, newdata = data.frame(days=19000), interval = "prediction", level = 0.95)
+```
+
+L’intervalle de prédiction à 95 % pour le pH en 2050 est [7.995358 ; 8.050575].
+
+Il est donc possible au seuil de 95% d'observer un pH inférieur à 8 (de justesse).
+
+
+
+### 4) Etude des résidus
+
+```{r}
+par(mfrow=c(2,2))
+plot(mod1)
+```
+
+Sur le graphe Residuals vs Fitted, on observe que les résidus sont centrés sur 0, leur esperence semble bien nulle, et les points sont uniforméments répartis autour de 0.
+
+Sur le Graphe Q-Q residuals, on remarque que les points suivent dans l'ensemble relativement bien la diagonale et sont allignés, à l'exception des extrémités.
+
+Sur le Graphe Residuals vs Leverage, on observe que l'ensemble des points est regroupé sous une distance de cook inférieure à 0.5 donc pas de valeurs à fort levier.
+
+Le modèle semble donc valide.
+
+
+### 5) L'océan se réchauffe t-il ?
+
+On commence par créer un modèle de régression linéaire pour prédire la température. 
+
+Au vu des relations entre les différentes variables, on choisit d'expliquer la température en fonction du pH :
+
+
+```{r}
+mod_temp = lm(temp~pHcalc_insitu, data = Acid)
+summary(mod_temp)
+par(mfrow=c(2,2))
+plot(mod_temp)
+
+```
+
+Le modèle n'explique que 36.43% de la variance, mais cela s'explique par le fait que les données semblent très bruitées.
+
+Le test de student sur le coefficient de la variable pH donne une P-Value très largement inférieure à 0.05, la variable est donc significative.
+
+L'analyse des résidus quand à elle, similaire à la question 4, semble concluante et laisse penser que le modèle est valide. (Suivi d'une loi normale, résidus uniformément répartis autour de 0 et pas de levier)
+
+Ce modèle prédit que la température diminue quand le pH augmente. Or on a vu précédemment que le pH diminue en fonction du temps. On peut donc en conclure que la température des océans augmente.
+
+## Exercice 2 - Valeur des logements des villes aux alentours de Boston
+
+### 0) Chargement des données et création du modèle
+
+```{r}
+Housing = read.table("Data/housing_new.txt", header = TRUE)
+head(Housing)
+pairs(Housing)
+```
+```{r}
+mod_full <- lm(class ~ ., data = Housing)
+summary(mod_full)
+par(mfrow=c(2,2))
+plot(mod_full)
+```
+
+### 1) Part de la variance expliquée par le modèle
+
+Le modèle explique environ R2 = 73.43 % de la variabilité observée dans la valeur des logements.
+
+### 2) Significativité du modèle
+
+On teste H0 : tous les coefficients des variables explicatives sont nuls.
+La statistique F suit une loi de Fisher F12,493 sous H0.
+Avec une p-value < 2.2 × 10^(-16), très inférieure au risque de première espèce alpha = 1 %, on rejette H0. 
+
+Le modèle global est donc hautement significatif et les variables explicatives ont un effet sur la valeur des logements.
+
+
+### 3) Variables significatives dans le modèle
+
+En considérant un seuil de significativité alpha = 1 %, les variables significatives dans le modèle sont CRIM, ZN, CHAS, NOX, RM, DIS, RAD, TAX, PTRATIO et LSTAT (Ce sont toutes les caractéristiques qui ont une p-value < 0.01)
+
+On ne peut pas être sûr que les autres variables n’aient aucun effet, car certains de ces effets peuvent être masqués par la colinéarité dans les variables explicatives.
+
+
+### 4) Simplification du modèle
+
+Pour simplifier le modèle, on utilise la méthode backward, qui supprime progressivement les variables les moins significatives afin de minimiser le critère AIC.
+
+```{r}
+mod_simpl = step(mod_full, direction = "backward", trace = FALSE)
+summary(mod_simpl)
+```
+
+
+
+### 5) Evaluation du modèle obtenu
+
+On compare ici les R2 ajustés pour prendre en compte le nombre de variables. Avec le modèle simplifié : R2 = 72.89%, tandis qu'avec le modèle complet, R2=72.78%. Le modèle est donc tout à fait performant vis-à-vis du modèle initial pour les prédictions.
+
+Ce modèle a moins de variables donc plus de simplicité. Tous les coefficients des variables retenues ont une p-value inférieure à 0.01. Les variables retenues sont donc toutes significatives dans ce nouveau modèle.
+
+Analysons les résidus : 
+```{r}
+par(mfrow=c(2,2))
+plot(mod_simpl)
+```
+Ce modèle semble globalement valide et très similaire au modèle complet au niveau des résidus (malgré une légère tendance en U aux extrémités sur le graphe Residual vs Fitted et une légère déviation aux éxtrémités sur le graphe Q-Q Residuals)$
+
+
+Ce modèle simple donc satisfaisant.
+
+
+
+### 6) Proposition d'un meilleur modèle
+
+On tente ici d'ajouter des interactions entre les variables explicatives : 
+
+
+```{r}
+# modèle avec toutes les interactions
+new_full_model <- lm(class ~ (.)^2, data = Housing)
+summary(new_full_model)
+```
+
+
+Puis on simplifie le modèle avec BIC cette fois-ci (car la méthode est plus restrictive que AIC et on a beaucoup de variables)
+
+
+```{r}
+best_model <- step(new_full_model, direction = "backward",k = log(nrow(Acid)), trace = FALSE)
+summary(best_model)
+par(mfrow=c(2,2))
+plot(best_model)
+```
+On obtient finalement un modèle très complexe mais beaucoup plus performant car R2 = 90.56% et R2 ajusté = 89.79%.
+ 
+L'étude des résidus est également plus convaincante que celle des modèles précédents : en effet La tendance en U dans residuals vs fitted est atténuée et les points sont beaucoup plus alignés sur la diagonale de Q-Q Residuals.
+
+Ce modèle est beaucoup plus complexe que les autres mais s'adapte bien dans un cadre ou la prédiction est favorisée devant l'explicabilité du modèle.
+
+NB :  Nous n'avons plus de temps mais il faudrait analyser les variances des variables explicatives : il y a un risque de surapprentissage avec ce modèle.
+
